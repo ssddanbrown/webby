@@ -16,24 +16,27 @@ func (m *managerServer) addFileServer(rootPath string) error {
 		return err
 	}
 	m.fileServers = append(m.fileServers, *fServer)
+	fmt.Println(fmt.Sprintf("Listening on port %d", fServer.port))
 	return nil
 }
 
-func (*managerServer) listen(port int) error {
+func (m *managerServer) listen(port int) error {
 
 	eServer := echo.New()
-
-	// listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	// if err != nil {
-	// 	return err
-	// }
-
-	// sMux := http.NewServeMux()
-	// sMux.Handle("/add", handler)
-
-	// http.Serve(listener, http.DefaultServeMux)
+	setupManagerRouting(m, eServer)
 
 	eServer.Run(standard.New(fmt.Sprintf("127.0.0.1:%d", port)))
-
 	return nil
+}
+
+func setupManagerRouting(manager *managerServer, eServer *echo.Echo) {
+
+	// Create new file server instance
+	eServer.Post("/create-server", func(c echo.Context) error {
+		rootPath := c.FormValue("root_path")
+		fmt.Println(rootPath)
+		manager.addFileServer(rootPath)
+		return nil
+	})
+
 }
