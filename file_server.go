@@ -8,9 +8,9 @@ import (
 )
 
 type fileServer struct {
-	port     int
-	rootPath string
-	server   net.Listener
+	Port     int          `json:"port"`
+	RootPath string       `json:"path"`
+	server   net.Listener `json:"-"`
 }
 
 var usedPorts []int
@@ -33,7 +33,7 @@ func startFileServer(rootPath string) (*fileServer, error) {
 		http.Serve(listener, http.FileServer(http.Dir(rootPath)))
 	}()
 
-	return &fileServer{port: port, rootPath: serverRootPath, server: listener}, nil
+	return &fileServer{Port: port, RootPath: serverRootPath, server: listener}, nil
 }
 
 func getFreePort() int {
