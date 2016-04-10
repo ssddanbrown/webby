@@ -1,2 +1,3 @@
 test/
-*.sh
+rice-box.go
+bins

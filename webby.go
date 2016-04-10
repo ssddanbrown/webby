@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,7 +10,11 @@ import (
 	"strings"
 )
 
+var isDev bool
+
 func main() {
+
+	isDev = true
 
 	commandArgs := os.Args
 	var inputPath string
@@ -20,7 +25,7 @@ func main() {
 		inputPath, _ = filepath.Abs("./")
 	}
 
-	port := 8080
+	port := 35729
 	portFree := checkPortFree(port)
 	isHtml := isHtmlFile(inputPath)
 
@@ -43,9 +48,8 @@ func main() {
 		if isHtml {
 			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, filepath.Base(inputPath))
 			openWebPage(url)
-			fmt.Println("ishtml")
 		}
-		err = manager.listen(8080)
+		err = manager.listen(port)
 		checkErr(err)
 	} else {
 		// Send request to add server
@@ -54,14 +58,26 @@ func main() {
 			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, filepath.Base(inputPath))
 			openWebPage(url)
 		}
+
+		display("Server already open")
 	}
 
 }
 
 func checkErr(err error) {
 	if err != nil {
-		fmt.Println(err)
+		color.Red("[ERROR] %s", err.Error())
 	}
+}
+
+func devlog(text string) {
+	if isDev {
+		color.Blue("[DEVLOG] %s", text)
+	}
+}
+
+func display(text string) {
+	color.Green("[LOG] %s", text)
 }
 
 func intInSlice(integer int, list []int) bool {
