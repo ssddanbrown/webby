@@ -12,9 +12,10 @@ The app also acts as a live-reload server. [Browser extensions found here.](http
 These awesome libraries has been used in webby:
 * github.com/labstack/echo
 * github.com/fatih/color
-* github.com/GeertJohan/go.rice
 * github.com/howeyc/fsnotify
 * golang.org/x/net/websocket
+* github.com/GeertJohan/go.rice
+* github.com/akavel/rsrc
 
 ### License
 

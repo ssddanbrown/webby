@@ -1,5 +1,5 @@
 #!/bin/bash
-#
+
 rice embed-go
 
 # Set correct script dir
@@ -14,8 +14,10 @@ else
 	echo "Building binaries for all platforms"
 	COMMAND="go build -o build/bins/webby"
 
-	eval "env GOOS=windows GOARCH=amd64 $COMMAND-windows-amd64.exe"
+	rsrc -manifest build/webby.manifest -ico build/webby.ico,build/webby-64.ico,build/webby-32.ico,build/webby-16.ico
+	eval "env GOOS=windows GOARCH=386 $COMMAND-windows-386.exe"
 	echo "Windows binary built"
+	rm -f rsrc.syso
 
 	eval "env GOOS=linux GOARCH=amd64 $COMMAND-linux-amd64"
 	echo "Linux binary built"
