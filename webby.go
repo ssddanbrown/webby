@@ -129,7 +129,7 @@ func openWebPage(url string) error {
 		fmt.Println(url)
 		err = exec.Command("xdg-open", url).Run()
 	case "windows", "darwin":
-		err = exec.Command("open", url).Run()
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Run()
 	default:
 		err = fmt.Errorf("unsupported platform")
 	}
