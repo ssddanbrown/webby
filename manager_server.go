@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/websocket"
 	"net/http"
 	"path/filepath"
+	"strings"
 )
 
 type managerServer struct {
@@ -89,6 +90,16 @@ func (m *managerServer) sendReloadSignal(file string) {
 	devlog("File changed: " + file)
 }
 
+func (m *managerServer) handleFileChange(filePath string) {
+
+	if strings.Contains(filePath, ".git") {
+		devlog("GITCHANGE")
+		return
+	}
+
+	m.changedFiles <- filePath
+}
+
 func (m *managerServer) startFileWatcher() error {
 	watcher, err := fsnotify.NewWatcher()
 	checkErr(err)
@@ -105,7 +116,7 @@ func (m *managerServer) startFileWatcher() error {
 			select {
 			case ev := <-watcher.Event:
 				if ev.IsModify() {
-					m.changedFiles <- ev.Name
+					m.handleFileChange(ev.Name)
 				}
 			case err := <-watcher.Error:
 				devlog("File Watcher Error: " + err.Error())
