@@ -1,12 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/GeertJohan/go.rice"
 	"github.com/howeyc/fsnotify"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/engine/standard"
 	"golang.org/x/net/websocket"
 	"net/http"
 	"path/filepath"
@@ -53,9 +52,6 @@ func (m *managerServer) findFileServer(rootPath string) (*fileServer, error) {
 
 func (m *managerServer) listen(port int) error {
 
-	eServer := echo.New()
-	setupManagerRouting(m, eServer)
-
 	m.startFileWatcher()
 
 	go func() {
@@ -66,7 +62,9 @@ func (m *managerServer) listen(port int) error {
 		}
 	}()
 
-	eServer.Run(standard.New(fmt.Sprintf("127.0.0.1:%d", port)))
+	handler := http.NewServeMux()
+	setupManagerRouting(m, handler)
+	http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", port), handler)
 	return nil
 }
 
@@ -142,23 +140,24 @@ func (m *managerServer) watchFolder(folderPath string) error {
 	return nil
 }
 
-func setupManagerRouting(manager *managerServer, eServer *echo.Echo) {
+func setupManagerRouting(manager *managerServer, handler *http.ServeMux) {
 
 	// Create new file server instance
-	eServer.Post("/create-server", func(c echo.Context) error {
-		rootPath := c.FormValue("root_path")
-		fileServer, err := manager.addFileServer(rootPath)
-		checkErr(err)
-		return c.JSON(http.StatusCreated, fileServer)
+	handler.HandleFunc("/create-server", func(w http.ResponseWriter, req *http.Request) {
+		if req.Method == "POST" {
+			rootPath := req.FormValue("root_path")
+			fileServer, err := manager.addFileServer(rootPath)
+			checkErr(err)
+			err = json.NewEncoder(w).Encode(fileServer)
+			checkErr(err)
+		}
 	})
 
-	assetHandler := http.FileServer(rice.MustFindBox("res").HTTPBox())
-
-	// eServer.Get("/test.html", standard.WrapHandler(assetHandler))
-	eServer.Get("/*", standard.WrapHandler(http.StripPrefix("/", assetHandler)))
+	staticServer := http.StripPrefix("/", http.FileServer(rice.MustFindBox("res").HTTPBox()))
+	handler.Handle("/", staticServer)
 
 	wsHandler := getLivereloadWsHandler(manager)
-	eServer.Get("/livereload", standard.WrapHandler(websocket.Handler(wsHandler)))
+	handler.Handle("/livereload", websocket.Handler(wsHandler))
 }
 
 type livereloadResponse struct {

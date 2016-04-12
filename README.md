@@ -10,7 +10,6 @@ The app also acts as a live-reload server. [Browser extensions found here.](http
 ### Libs used
 
 These awesome libraries has been used in webby:
-* github.com/labstack/echo
 * github.com/fatih/color
 * github.com/howeyc/fsnotify
 * golang.org/x/net/websocket
