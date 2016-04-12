@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type managerServer struct {
@@ -19,6 +20,7 @@ type managerServer struct {
 	fileWatcher    *fsnotify.Watcher
 	changedFiles   chan string
 	sockets        []*websocket.Conn
+	lastFileChange int64
 }
 
 func (m *managerServer) addFileServer(rootPath string) (*fileServer, error) {
@@ -92,11 +94,19 @@ func (m *managerServer) sendReloadSignal(file string) {
 
 func (m *managerServer) handleFileChange(filePath string) {
 
+	// Prevent duplicate changes
+	currentTime := time.Now().UnixNano()
+	if (currentTime-m.lastFileChange)/1000000 < 10 {
+		return
+	}
+
+	// Ignore git directories
 	if strings.Contains(filePath, ".git") {
 		devlog("GITCHANGE")
 		return
 	}
 
+	m.lastFileChange = currentTime
 	m.changedFiles <- filePath
 }
 
