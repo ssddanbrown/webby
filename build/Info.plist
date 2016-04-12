@@ -3,11 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>webby</string>
+    <string>wrapper</string>
     <key>CFBundleIdentifier</key>
     <string>me.danb.webby</string>
+    <key>CFBundleIconFile</key>
+    <string>webby.icns</string>
     <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
+    <string>1.0</string>
     <key>CFBundleName</key>
     <string>Webby</string>
     <key>CFBundlePackageType</key>

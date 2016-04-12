@@ -27,6 +27,8 @@ else
 	mkdir build/bins/webby-osx.app
 	eval "env GOOS=darwin GOARCH=amd64 $COMMAND-darwin-amd64"
 	mv build/bins/webby-darwin-amd64 build/bins/webby-osx.app/webby
+	cp build/mac-launch-wrapper.sh build/bins/webby-osx.app/wrapper
+	cp build/webby.icns build/bins/webby-osx.app/webby.icns
 	cp build/Info.plist build/bins/webby-osx.app/Info.plist
 	echo "OSX binary built"
 fi
