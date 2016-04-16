@@ -54,19 +54,8 @@ func (m *managerServer) findFileServer(rootPath string) (*fileServer, error) {
 }
 
 func (m *managerServer) listen(port int) error {
-
 	m.startFileWatcher()
-
-	go func() {
-		for f := range m.changedFiles {
-			if len(m.sockets) > 0 {
-				m.sendReloadSignal(f)
-			}
-		}
-	}()
-
-	handler := http.NewServeMux()
-	setupManagerRouting(m, handler)
+	handler := m.getManagerRouting()
 	http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", port), handler)
 	return nil
 }
@@ -143,6 +132,14 @@ func (m *managerServer) startFileWatcher() error {
 		checkErr(err)
 	}
 
+	go func() {
+		for f := range m.changedFiles {
+			if len(m.sockets) > 0 {
+				m.sendReloadSignal(f)
+			}
+		}
+	}()
+
 	return nil
 }
 
@@ -161,7 +158,9 @@ func (m *managerServer) watchFolder(folderPath string) error {
 	return nil
 }
 
-func setupManagerRouting(manager *managerServer, handler *http.ServeMux) {
+func (manager *managerServer) getManagerRouting() *http.ServeMux {
+
+	handler := http.NewServeMux()
 
 	// Create new file server instance
 	handler.HandleFunc("/create-server", func(w http.ResponseWriter, req *http.Request) {
@@ -177,8 +176,10 @@ func setupManagerRouting(manager *managerServer, handler *http.ServeMux) {
 	staticServer := http.StripPrefix("/", http.FileServer(rice.MustFindBox("res").HTTPBox()))
 	handler.Handle("/", staticServer)
 
-	wsHandler := getLivereloadWsHandler(manager)
+	wsHandler := manager.getLivereloadWsHandler()
 	handler.Handle("/livereload", websocket.Handler(wsHandler))
+
+	return handler
 }
 
 type livereloadResponse struct {
@@ -197,7 +198,7 @@ type livereloadChange struct {
 	LiveCSS bool   `json:"liveCSS"`
 }
 
-func getLivereloadWsHandler(manager *managerServer) func(ws *websocket.Conn) {
+func (manager *managerServer) getLivereloadWsHandler() func(ws *websocket.Conn) {
 	return func(ws *websocket.Conn) {
 
 		manager.sockets = append(manager.sockets, ws)
