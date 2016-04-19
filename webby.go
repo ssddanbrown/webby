@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/fatih/color"
 	"os"
@@ -10,17 +11,21 @@ import (
 	"strings"
 )
 
-var isDev bool
+var isVerbose bool
 
 func main() {
 
-	isDev = true
+	flag.Usage = usage
+	isVerbosePtr := flag.Bool("v", false, "Show a verbose output")
+	flag.Parse()
 
-	commandArgs := os.Args
+	isVerbose = *isVerbosePtr
+
+	commandArgs := flag.Args()
 	var inputPath string
 
-	if len(commandArgs) > 1 {
-		inputPath, _ = filepath.Abs(commandArgs[1])
+	if len(commandArgs) > 0 {
+		inputPath, _ = filepath.Abs(commandArgs[0])
 	} else {
 		inputPath, _ = filepath.Abs("./")
 	}
@@ -65,19 +70,21 @@ func main() {
 }
 
 func checkErr(err error) {
-	if err != nil {
+	if err != nil && isVerbose {
 		color.Red("[ERROR] %s", err.Error())
 	}
 }
 
 func devlog(text string) {
-	if isDev {
+	if isVerbose {
 		color.Blue("[DEVLOG] %s", text)
 	}
 }
 
 func display(text string) {
-	color.Green("[LOG] %s", text)
+	if isVerbose {
+		color.Green("[LOG] %s", text)
+	}
 }
 
 func intInSlice(integer int, list []int) bool {
@@ -134,4 +141,16 @@ func openWebPage(url string) error {
 		err = fmt.Errorf("unsupported platform")
 	}
 	return err
+}
+
+func usage() {
+	color.Blue("Usage of webby:")
+	color.Green("  webby [options] [<File or folder path>]")
+	fmt.Println("")
+	color.Blue("Examples:")
+	color.Cyan("  webby ./ 		# Starts a file server in the current directory")
+	color.Cyan("  webby test.html 	# As above and opens up test.html in the browser")
+	fmt.Println("")
+	color.Blue("Options:")
+	flag.PrintDefaults()
 }
