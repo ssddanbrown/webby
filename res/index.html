@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+
+	<title>Webby Management Interface</title>
+	<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+	
+	<div class="container">
+
+		<h1>Webby</h1>
+		
+		<section class="details">
+			<p>Running on <a style="color: #4DCDDC;" href="http://localhost:{{.Port}}">http://localhost:{{.Port}}</a></p>
+			{{if .NetworkIp}}
+				<p>Your local network address is <a style="color: #DA8C44;" href="http://{{.NetworkIp}}:{{.Port}}" target="_blank">http://{{.NetworkIp}}:{{.Port}}</a></p>
+			{{end}}
+		</section>
+
+		<h2>Running Servers</h2>
+
+		<section class="servers">
+			
+			<table>
+				{{range .FileServers}}
+				<tr>
+					<td><a href="{{.Url}}" target="_blank">{{.Url}}</a></td>
+					<td><a style="color: #BA76CE;text-decoration:underline;" href="http://{{$.NetworkIp}}:{{.Port}}" target="_blank">Network</a></td>
+					<td>{{.RootPath}}</td>
+				</tr>
+				{{end}}
+			</table>
+
+		</section>
+
+	</div>
+
+</body>
+</html>

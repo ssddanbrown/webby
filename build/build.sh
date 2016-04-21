@@ -10,6 +10,7 @@ if [ "$1" != "all" ]
 then
 	# Create only locally
 	go install github.com/ssddanbrown/webby
+	echo "Webby installed"
 else
 	echo "Building binaries for all platforms"
 	COMMAND="go build -o build/bins/webby"

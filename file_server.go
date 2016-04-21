@@ -24,7 +24,7 @@ func startFileServer(rootPath string) (*fileServer, error) {
 		return nil, err
 	}
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, err
 	}
@@ -34,6 +34,10 @@ func startFileServer(rootPath string) (*fileServer, error) {
 	}()
 
 	return &fileServer{Port: port, RootPath: serverRootPath, server: listener}, nil
+}
+
+func (fs *fileServer) Url() string {
+	return fmt.Sprintf("http://localhost:%d", fs.Port)
 }
 
 func getFreePort() int {

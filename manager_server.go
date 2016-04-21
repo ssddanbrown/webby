@@ -7,6 +7,8 @@ import (
 	"github.com/GeertJohan/go.rice"
 	"github.com/howeyc/fsnotify"
 	"golang.org/x/net/websocket"
+	"html/template"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -14,12 +16,14 @@ import (
 )
 
 type managerServer struct {
-	fileServers    []fileServer
+	FileServers    []fileServer
 	watchedFolders []string
 	fileWatcher    *fsnotify.Watcher
 	changedFiles   chan string
 	sockets        []*websocket.Conn
 	lastFileChange int64
+	Port           int
+	NetworkIp      string
 }
 
 func (m *managerServer) addFileServer(rootPath string) (*fileServer, error) {
@@ -33,7 +37,7 @@ func (m *managerServer) addFileServer(rootPath string) (*fileServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	m.fileServers = append(m.fileServers, *fServer)
+	m.FileServers = append(m.FileServers, *fServer)
 	display(fmt.Sprintf("Serving files from %s at http://localhost:%d", fServer.RootPath, fServer.Port))
 
 	m.watchFolder(fServer.RootPath)
@@ -44,9 +48,9 @@ func (m *managerServer) findFileServer(rootPath string) (*fileServer, error) {
 	searchPath, err := filepath.Abs(rootPath)
 	checkErr(err)
 
-	for i := 0; i < len(m.fileServers); i++ {
-		if m.fileServers[i].RootPath == searchPath {
-			return &m.fileServers[i], nil
+	for i := 0; i < len(m.FileServers); i++ {
+		if m.FileServers[i].RootPath == searchPath {
+			return &m.FileServers[i], nil
 		}
 	}
 
@@ -55,8 +59,10 @@ func (m *managerServer) findFileServer(rootPath string) (*fileServer, error) {
 
 func (m *managerServer) listen(port int) error {
 	m.startFileWatcher()
+	m.Port = port
+	m.NetworkIp = getLocalIp()
 	handler := m.getManagerRouting()
-	http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", port), handler)
+	http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
 	return nil
 }
 
@@ -173,9 +179,23 @@ func (manager *managerServer) getManagerRouting() *http.ServeMux {
 		}
 	})
 
-	staticServer := http.StripPrefix("/", http.FileServer(rice.MustFindBox("res").HTTPBox()))
-	handler.Handle("/", staticServer)
+	fileBox := rice.MustFindBox("res")
 
+	// Get manager hompage
+	handler.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		templString := fileBox.MustString("index.html")
+		templ, _ := template.New("Home").Parse(templString)
+		templ.Execute(w, manager)
+	})
+
+	// Static file serving
+	staticServer := http.FileServer(fileBox.HTTPBox())
+	handler.Handle("/static/", staticServer)
+
+	// Get LiveReload Script
+	handler.Handle("/livereload.js", http.FileServer(fileBox.HTTPBox()))
+
+	// Websocket handling
 	wsHandler := manager.getLivereloadWsHandler()
 	handler.Handle("/livereload", websocket.Handler(wsHandler))
 
@@ -232,4 +252,20 @@ func (manager *managerServer) getLivereloadWsHandler() func(ws *websocket.Conn) 
 
 	}
 
+}
+
+func getLocalIp() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
 }

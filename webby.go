@@ -54,6 +54,7 @@ func main() {
 			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, filepath.Base(inputPath))
 			openWebPage(url)
 		}
+		display(fmt.Sprintf("Webby Manager started at http://localhost:%d", port))
 		err = manager.listen(port)
 		checkErr(err)
 	} else {
@@ -82,9 +83,7 @@ func devlog(text string) {
 }
 
 func display(text string) {
-	if isVerbose {
-		color.Green("[LOG] %s", text)
-	}
+	color.Green("%s", text)
 }
 
 func intInSlice(integer int, list []int) bool {
