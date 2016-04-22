@@ -11,13 +11,14 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type managerServer struct {
 	FileServers    []fileServer
-	watchedFolders []string
+	WatchedFolders []string
 	fileWatcher    *fsnotify.Watcher
 	changedFiles   chan string
 	sockets        []*websocket.Conn
@@ -27,7 +28,7 @@ type managerServer struct {
 }
 
 func (m *managerServer) addFileServer(rootPath string) (*fileServer, error) {
-	fServer, err := m.findFileServer(rootPath)
+	fServer, err := m.findFileServerByPath(rootPath)
 	if err == nil {
 		display("Server already running")
 		return fServer, err
@@ -44,7 +45,7 @@ func (m *managerServer) addFileServer(rootPath string) (*fileServer, error) {
 	return fServer, nil
 }
 
-func (m *managerServer) findFileServer(rootPath string) (*fileServer, error) {
+func (m *managerServer) findFileServerByPath(rootPath string) (*fileServer, error) {
 	searchPath, err := filepath.Abs(rootPath)
 	checkErr(err)
 
@@ -132,9 +133,9 @@ func (m *managerServer) startFileWatcher() error {
 		watcher.Close()
 	}()
 
-	for i := 0; i < len(m.watchedFolders); i++ {
-		err = watcher.Watch(m.watchedFolders[i])
-		devlog("Adding file watcher to " + m.watchedFolders[i])
+	for i := 0; i < len(m.WatchedFolders); i++ {
+		err = watcher.Watch(m.WatchedFolders[i])
+		devlog("Adding file watcher to " + m.WatchedFolders[i])
 		checkErr(err)
 	}
 
@@ -150,8 +151,8 @@ func (m *managerServer) startFileWatcher() error {
 }
 
 func (m *managerServer) watchFolder(folderPath string) error {
-	if !stringInSlice(folderPath, m.watchedFolders) {
-		m.watchedFolders = append(m.watchedFolders, folderPath)
+	if !stringInSlice(folderPath, m.WatchedFolders) {
+		m.WatchedFolders = append(m.WatchedFolders, folderPath)
 		if m.fileWatcher == nil {
 			return nil
 		}
@@ -162,6 +163,15 @@ func (m *managerServer) watchFolder(folderPath string) error {
 		}
 	}
 	return nil
+}
+
+func (manager *managerServer) findFileServerById(id int) (int, *fileServer) {
+	for index, server := range manager.FileServers {
+		if server.ID == id {
+			return index, &server
+		}
+	}
+	return -1, nil
 }
 
 func (manager *managerServer) getManagerRouting() *http.ServeMux {
@@ -179,6 +189,33 @@ func (manager *managerServer) getManagerRouting() *http.ServeMux {
 		}
 	})
 
+	// Delete a file server instance
+	handler.HandleFunc("/delete-server", func(w http.ResponseWriter, req *http.Request) {
+		id := req.URL.Query().Get("id")
+		idVal, err := strconv.Atoi(id)
+		checkErr(err)
+		index, server := manager.findFileServerById(idVal)
+		if server == nil {
+			err := errors.New(fmt.Sprintf("Fileserver with id of %d not found", idVal))
+			checkErr(err)
+			return
+		}
+		// Destroy server
+		server.server.Close()
+		manager.fileWatcher.RemoveWatch(server.RootPath)
+		for i, path := range manager.WatchedFolders {
+			if path == server.RootPath {
+				manager.WatchedFolders = append(manager.WatchedFolders[:i], manager.WatchedFolders[i+1:]...)
+				break
+			}
+		}
+		manager.FileServers = append(manager.FileServers[:index], manager.FileServers[index+1:]...)
+
+		devlog(fmt.Sprintf("Deleted server with id of %d", server.ID))
+		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+	})
+
+	// Load compiled in static content
 	fileBox := rice.MustFindBox("res")
 
 	// Get manager hompage

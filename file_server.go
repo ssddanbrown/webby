@@ -8,12 +8,14 @@ import (
 )
 
 type fileServer struct {
+	ID       int          `json:"id"`
 	Port     int          `json:"port"`
 	RootPath string       `json:"path"`
 	server   net.Listener `json:"-"`
 }
 
 var usedPorts []int
+var idCounter int
 
 func startFileServer(rootPath string) (*fileServer, error) {
 
@@ -33,7 +35,9 @@ func startFileServer(rootPath string) (*fileServer, error) {
 		http.Serve(listener, http.FileServer(http.Dir(rootPath)))
 	}()
 
-	return &fileServer{Port: port, RootPath: serverRootPath, server: listener}, nil
+	idCounter++
+
+	return &fileServer{ID: idCounter, Port: port, RootPath: serverRootPath, server: listener}, nil
 }
 
 func (fs *fileServer) Url() string {

@@ -20,17 +20,26 @@
 			{{end}}
 		</section>
 
-		<h2>Running Servers</h2>
 
 		<section class="servers">
-			
+			<h2>Running Servers</h2>
+
 			<table>
-				{{range .FileServers}}
-				<tr>
-					<td><a href="{{.Url}}" target="_blank">{{.Url}}</a></td>
-					<td><a style="color: #BA76CE;text-decoration:underline;" href="http://{{$.NetworkIp}}:{{.Port}}" target="_blank">Network</a></td>
-					<td>{{.RootPath}}</td>
-				</tr>
+				{{if .FileServers}}
+					{{range .FileServers}}
+					<tr>
+						<td><a href="{{.Url}}" target="_blank">{{.Url}}</a></td>
+						<td><a style="color: #BA76CE;text-decoration:underline;" href="http://{{$.NetworkIp}}:{{.Port}}" target="_blank">Network</a></td>
+						<td><a style="color: #DE5656;text-decoration:underline;" href="http://localhost:{{$.Port}}/delete-server?id={{.ID}}">Delete</a></td>
+					</tr>
+					<tr>
+						<td colspan="3">{{.RootPath}}</td>
+					</tr>
+					{{end}}
+				{{else}}
+					<tr>
+						<td>No servers running</td>
+					</tr>
 				{{end}}
 			</table>
 
