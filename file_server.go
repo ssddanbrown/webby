@@ -59,7 +59,7 @@ func checkPortFree(port int) bool {
 		return false
 	}
 
-	conn, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	conn, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return false
 	}
