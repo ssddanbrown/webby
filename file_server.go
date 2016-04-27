@@ -26,7 +26,7 @@ func startFileServer(rootPath string) (*fileServer, error) {
 		return nil, err
 	}
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func checkPortFree(port int) bool {
 		return false
 	}
 
-	conn, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	conn, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		return false
 	}

@@ -63,7 +63,7 @@ func (m *managerServer) listen(port int) error {
 	m.Port = port
 	m.NetworkIp = getLocalIp()
 	handler := m.getManagerRouting()
-	http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
+	http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), handler)
 	return nil
 }
 
