@@ -300,7 +300,10 @@ func getLocalIp() string {
 		// check the address type and if it is not a loopback the display it
 		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
+				ipString := ipnet.IP.String()
+				if strings.Index(ipString, "192.168") == 0 || strings.Index(ipString, "10.") == 0 {
+					return ipString
+				}
 			}
 		}
 	}
