@@ -15,7 +15,7 @@ else
 	echo "Building binaries for all platforms"
 	COMMAND="go build -o build/bins/webby"
 
-	rsrc -manifest build/webby.manifest -ico build/webby.ico,build/webby-64.ico,build/webby-32.ico,build/webby-16.ico
+	rsrc -manifest build/webby.manifest -ico build/webby.ico
 	eval "env GOOS=windows GOARCH=386 $COMMAND-windows-386.exe"
 	echo "Windows binary built"
 	rm -f rsrc.syso
