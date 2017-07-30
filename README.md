@@ -1,13 +1,12 @@
 # Webby
 
-A windows-focused tiny static webserver app written in go. It features live-reload functionality built in for HTML files which also dynamically reloads CSS files.
+A windows-focused tiny static web server app written in go. It features live-reload functionality built in for HTML files which also dynamically reloads CSS files.
 
 You can set webby as your default program to open `.html` files. THen, When a `.html` is opened, webby will start then open the page in your default browser.
 
-Webby sits in the windows taskbar. When clicked it will open the managment interface via a browser. You can exit webby by right-clicking this icon.
+Webby sits in the windows taskbar. When clicked it will open the management interface via a browser. You can exit webby by right-clicking this icon.
 
-Just to be clear - I currently have very little experience in writing Go so please allow a little slack in the code quality.
-If you spot areas to be improved please create a pull request.
+My experience of writing in Go is limited so there's likely to be inefficiencies & bugs.
 
 
 ### Security Considerations
@@ -17,6 +16,12 @@ When ran, Webby makes the entire directory structure below the file/folder locat
 Upon the above, Someone with access to port `35729` on your machine could create new servers at any directory they want then access via the above method. 
 
 It is recommended to only use webby behind a firewall on networks you trust due to the above security concerns.
+
+### Project Goals
+
+* Should be focused on static HTML/CSS/JS development.
+* Should be super simple to use.
+* Should be lightweight.
 
 ### Libs used
 

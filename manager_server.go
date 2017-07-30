@@ -34,7 +34,7 @@ type managerServer struct {
 }
 
 func (m *managerServer) addFileServer(path string) (*fileServer, error) {
-	fServer, err := m.findFileServerByPath(filepath.Base(path))
+	fServer, err := m.findFileServerByPath(formatRootPath(path))
 	if err == nil {
 		display("Server already running")
 		return fServer, err
@@ -55,9 +55,9 @@ func (m *managerServer) findFileServerByPath(rootPath string) (*fileServer, erro
 	searchPath, err := filepath.Abs(rootPath)
 	checkErr(err)
 
-	for i := 0; i < len(m.FileServers); i++ {
-		if m.FileServers[i].RootPath == searchPath {
-			return &m.FileServers[i], nil
+	for _, fServer := range m.FileServers {
+		if fServer.RootPath == searchPath {
+			return &fServer, nil
 		}
 	}
 

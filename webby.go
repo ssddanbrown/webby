@@ -52,8 +52,8 @@ func main() {
 	} else {
 		// Send request to add server
 		fServer = requestNewFileServer(port, inputPath)
-		if fServer.OpenedFile != "" {
-			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, fServer.OpenedFile)
+		if isHTMLFile(inputPath) {
+			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, filepath.Base(inputPath))
 			openWebPage(url)
 		}
 		display("Server already open")
