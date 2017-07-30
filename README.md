@@ -27,6 +27,7 @@ There are a few ways to use the `webby.exe` program:
     webby.exe hello.html
     ```
 
+When running for the first time you may get a 'Windows Smartscreen' warning.
 
 
 ## Security Considerations
@@ -45,7 +46,7 @@ It is recommended to only use webby behind a firewall on networks you trust due 
 
 ## Libs used
 
-These awesome libraries has been used in webby:
+These awesome libraries have been used in webby:
 * github.com/fatih/color
 * github.com/howeyc/fsnotify
 * golang.org/x/net/websocket
