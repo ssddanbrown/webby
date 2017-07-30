@@ -39,7 +39,7 @@ func (m *managerServer) addFileServer(path string) (*fileServer, error) {
 		return fServer, err
 	}
 
-	fServer, err = startFileServer(path)
+	fServer, err = startFileServer(path, m)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (m *managerServer) findFileServerByPath(rootPath string) (*fileServer, erro
 func (m *managerServer) listen(port int) error {
 
 	m.Port = port
-	m.NetworkIP = getLocalIp()
+	m.NetworkIP = getLocalIP()
 	m.startFileWatcher()
 
 	handler := m.getManagerRouting()
@@ -367,7 +367,7 @@ func (manager *managerServer) getLivereloadWsHandler() func(ws *websocket.Conn) 
 
 }
 
-func getLocalIp() string {
+func getLocalIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return ""

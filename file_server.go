@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -13,13 +15,14 @@ type fileServer struct {
 	Port       int    `json:"port"`
 	RootPath   string `json:"path"`
 	OpenedFile string `json:"file"`
+	manager    *managerServer
 	server     net.Listener
 }
 
 var usedPorts []int
 var idCounter int
 
-func startFileServer(path string) (*fileServer, error) {
+func startFileServer(path string, manager *managerServer) (*fileServer, error) {
 
 	rootPath := formatRootPath(path)
 	port := getFreePort()
@@ -40,12 +43,37 @@ func startFileServer(path string) (*fileServer, error) {
 	}
 
 	go func() {
-		http.Serve(listener, http.FileServer(http.Dir(rootPath)))
+
+		handler := http.NewServeMux()
+		staticHandler := http.FileServer(http.Dir(rootPath))
+
+		handler.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			rPath := r.URL.Path
+			fPath := filepath.Join(serverRootPath, rPath)
+
+			w.Header().Add("Cache-Control", "no-cache")
+
+			if isHTMLFile(fPath) {
+				_, err := os.Stat(fPath)
+				if err == nil {
+					file, err := os.Open(fPath)
+					checkErr(err)
+					w.Header().Add("Content-Type", "text/html")
+					io.Copy(w, file)
+					fmt.Fprintf(w, "\n<script src=\"http://localhost:%d/livereload.js\"></script>\n", manager.Port)
+					return
+				}
+			}
+
+			staticHandler.ServeHTTP(w, r)
+		})
+
+		http.Serve(listener, handler)
 	}()
 
 	idCounter++
 
-	return &fileServer{ID: idCounter, Port: port, RootPath: serverRootPath, OpenedFile: file, server: listener}, nil
+	return &fileServer{ID: idCounter, Port: port, RootPath: serverRootPath, OpenedFile: file, manager: manager, server: listener}, nil
 }
 
 func (fs *fileServer) Url() string {
