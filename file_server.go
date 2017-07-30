@@ -51,9 +51,11 @@ func startFileServer(path string, manager *managerServer) (*fileServer, error) {
 			rPath := r.URL.Path
 			fPath := filepath.Join(serverRootPath, rPath)
 
+			// Prevent caching of served files
 			w.Header().Add("Cache-Control", "no-cache")
 
-			if isHTMLFile(fPath) {
+			// Inject livereload script if serving a HTML file
+			if isHTMLFile(fPath) && manager.LiveReload {
 				_, err := os.Stat(fPath)
 				if err == nil {
 					file, err := os.Open(fPath)

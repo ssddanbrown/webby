@@ -18,6 +18,11 @@
 			{{if .NetworkIP}}
 				<p>Your local network address is <a style="color: #DA8C44;" href="http://{{.NetworkIP}}:{{.Port}}" target="_blank">http://{{.NetworkIP}}:{{.Port}}</a></p>
 			{{end}}
+			{{if .LiveReload}}
+			<p>Live reload enabled &nbsp; <a href="/toggle-livereload" style="color: #DE5656;text-decoration:underline;">Disable</a></p>
+			{{else}}
+			<p>Live reload disabled &nbsp; <a href="/toggle-livereload" style="text-decoration:underline;">Enable</a></p>
+			{{end}}
 		</section>
 
 

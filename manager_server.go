@@ -30,6 +30,7 @@ type managerServer struct {
 	lastFileChange int64
 	Port           int
 	NetworkIP      string
+	LiveReload     bool
 }
 
 func (m *managerServer) addFileServer(path string) (*fileServer, error) {
@@ -67,6 +68,7 @@ func (m *managerServer) listen(port int) error {
 
 	m.Port = port
 	m.NetworkIP = getLocalIP()
+	m.LiveReload = true
 	m.startFileWatcher()
 
 	handler := m.getManagerRouting()
@@ -135,7 +137,7 @@ func (m *managerServer) setupTrayIcon() {
 	}
 
 	// Now that the icon is visible, we can bring up an info balloon.
-	if err := ni.ShowInfo("Webby Started", "Click the tray icon to open the managment interface."); err != nil {
+	if err := ni.ShowInfo("Webby Started", "Click the tray icon to open the management interface."); err != nil {
 		log.Fatal(err)
 	}
 
@@ -272,7 +274,7 @@ func (manager *managerServer) getManagerRouting() *http.ServeMux {
 		checkErr(err)
 		index, server := manager.findFileServerById(idVal)
 		if server == nil {
-			err := errors.New(fmt.Sprintf("Fileserver with id of %d not found", idVal))
+			err := fmt.Errorf("Fileserver with ID of %d not found", idVal)
 			checkErr(err)
 			return
 		}
@@ -288,6 +290,12 @@ func (manager *managerServer) getManagerRouting() *http.ServeMux {
 		manager.FileServers = append(manager.FileServers[:index], manager.FileServers[index+1:]...)
 
 		devlog(fmt.Sprintf("Deleted server with id of %d", server.ID))
+		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+	})
+
+	// Toggle livereload on/off
+	handler.HandleFunc("/toggle-livereload", func(w http.ResponseWriter, req *http.Request) {
+		manager.LiveReload = !manager.LiveReload
 		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
 	})
 
