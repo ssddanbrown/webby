@@ -16,7 +16,7 @@ var isVerbose bool
 func main() {
 
 	flag.Usage = usage
-	isVerbosePtr := flag.Bool("v", false, "Show a verbose output")
+	isVerbosePtr := flag.Bool("v", false, "Show verbose output")
 	flag.Parse()
 
 	isVerbose = *isVerbosePtr

@@ -15,8 +15,8 @@
 		
 		<section class="details">
 			<p>Running on <a style="color: #4DCDDC;" href="http://localhost:{{.Port}}">http://localhost:{{.Port}}</a></p>
-			{{if .NetworkIp}}
-				<p>Your local network address is <a style="color: #DA8C44;" href="http://{{.NetworkIp}}:{{.Port}}" target="_blank">http://{{.NetworkIp}}:{{.Port}}</a></p>
+			{{if .NetworkIP}}
+				<p>Your local network address is <a style="color: #DA8C44;" href="http://{{.NetworkIP}}:{{.Port}}" target="_blank">http://{{.NetworkIP}}:{{.Port}}</a></p>
 			{{end}}
 		</section>
 
@@ -29,7 +29,7 @@
 					{{range .FileServers}}
 					<tr>
 						<td><a href="{{.Url}}" target="_blank">{{.Url}}</a></td>
-						<td><a style="color: #BA76CE;text-decoration:underline;" href="http://{{$.NetworkIp}}:{{.Port}}" target="_blank">Network</a></td>
+						<td><a style="color: #BA76CE;text-decoration:underline;" href="http://{{$.NetworkIP}}:{{.Port}}" target="_blank">Network</a></td>
 						<td><a style="color: #DE5656;text-decoration:underline;" href="http://localhost:{{$.Port}}/delete-server?id={{.ID}}">Delete</a></td>
 					</tr>
 					<tr>

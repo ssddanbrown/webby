@@ -1,6 +1,6 @@
 # Webby
 
-A tiny static webserver app written in go.
+A windows-focused tiny static webserver app written in go.
 
 Just to be clear - I currently have very little experience in writing Go so please allow a little slack in the code quality.
 If you spot areas to be improved please create a pull request.
@@ -25,6 +25,7 @@ These awesome libraries has been used in webby:
 * golang.org/x/net/websocket
 * github.com/GeertJohan/go.rice
 * github.com/akavel/rsrc
+* github.com/lxn/walk
 
 ### License
 
