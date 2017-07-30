@@ -3,12 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/fatih/color"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strings"
+
+	"github.com/fatih/color"
 )
 
 var isVerbose bool
@@ -32,39 +31,31 @@ func main() {
 
 	port := 35729
 	portFree := checkPortFree(port)
-	isHtml := isHtmlFile(inputPath)
 
 	var fServer *fileServer
 	var err error
 
 	if portFree {
-		// Create a new manage
-		var manager *managerServer = new(managerServer)
-
-		var serverPath string
-		if isHtml {
-			serverPath = filepath.Dir(inputPath)
-		} else {
-			serverPath = inputPath
-		}
-
-		fServer, err = manager.addFileServer(serverPath)
+		// Create a new manager server
+		var manager = new(managerServer)
+		fServer, err = manager.addFileServer(inputPath)
 		checkErr(err)
-		if isHtml {
-			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, filepath.Base(inputPath))
+
+		if fServer.OpenedFile != "" {
+			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, fServer.OpenedFile)
 			openWebPage(url)
 		}
+
 		display(fmt.Sprintf("Webby Manager started at http://localhost:%d", port))
 		err = manager.listen(port)
 		checkErr(err)
 	} else {
 		// Send request to add server
-		fServer = requestNewFileServer(port, formatRootPath(inputPath))
-		if isHtml {
-			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, filepath.Base(inputPath))
+		fServer = requestNewFileServer(port, inputPath)
+		if fServer.OpenedFile != "" {
+			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, fServer.OpenedFile)
 			openWebPage(url)
 		}
-
 		display("Server already open")
 	}
 
@@ -112,34 +103,8 @@ func isDir(path string) bool {
 	return fileInfo.IsDir()
 }
 
-func isHtmlFile(path string) bool {
-	exts := strings.Split(path, ".")
-	ext := strings.ToLower(exts[len(exts)-1])
-	htmlExts := []string{"html", "htm"}
-	return stringInSlice(ext, htmlExts)
-}
-
-func formatRootPath(path string) string {
-	basePath := filepath.Base(path)
-	if strings.Contains(basePath, ".") {
-		return filepath.Dir(path)
-	}
-	return path
-}
-
 func openWebPage(url string) error {
-	var err error
-
-	switch runtime.GOOS {
-	case "linux":
-		fmt.Println(url)
-		err = exec.Command("xdg-open", url).Run()
-	case "windows", "darwin":
-		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Run()
-	default:
-		err = fmt.Errorf("unsupported platform")
-	}
-	return err
+	return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Run()
 }
 
 func usage() {

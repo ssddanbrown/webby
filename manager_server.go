@@ -32,14 +32,14 @@ type managerServer struct {
 	NetworkIP      string
 }
 
-func (m *managerServer) addFileServer(rootPath string) (*fileServer, error) {
-	fServer, err := m.findFileServerByPath(rootPath)
+func (m *managerServer) addFileServer(path string) (*fileServer, error) {
+	fServer, err := m.findFileServerByPath(filepath.Base(path))
 	if err == nil {
 		display("Server already running")
 		return fServer, err
 	}
 
-	fServer, err = startFileServer(rootPath)
+	fServer, err = startFileServer(path)
 	if err != nil {
 		return nil, err
 	}

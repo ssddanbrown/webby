@@ -32,6 +32,11 @@
 						<td><a style="color: #BA76CE;text-decoration:underline;" href="http://{{$.NetworkIP}}:{{.Port}}" target="_blank">Network</a></td>
 						<td><a style="color: #DE5656;text-decoration:underline;" href="http://localhost:{{$.Port}}/delete-server?id={{.ID}}">Delete</a></td>
 					</tr>
+					{{if .OpenedFile}}
+					<tr>
+						<td colspan="3"><a href="{{.Url}}/{{.OpenedFile}}" target="_blank">Opened {{.OpenedFile}}</a></td>
+					</tr>
+					{{end}}
 					<tr>
 						<td colspan="3">{{.RootPath}}</td>
 					</tr>

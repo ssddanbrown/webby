@@ -5,21 +5,29 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"strings"
 )
 
 type fileServer struct {
-	ID       int          `json:"id"`
-	Port     int          `json:"port"`
-	RootPath string       `json:"path"`
-	server   net.Listener `json:"-"`
+	ID         int    `json:"id"`
+	Port       int    `json:"port"`
+	RootPath   string `json:"path"`
+	OpenedFile string `json:"file"`
+	server     net.Listener
 }
 
 var usedPorts []int
 var idCounter int
 
-func startFileServer(rootPath string) (*fileServer, error) {
+func startFileServer(path string) (*fileServer, error) {
 
+	rootPath := formatRootPath(path)
 	port := getFreePort()
+	file := ""
+
+	if isHTMLFile(path) {
+		file = filepath.Base(path)
+	}
 
 	serverRootPath, err := filepath.Abs(rootPath)
 	if err != nil {
@@ -37,7 +45,7 @@ func startFileServer(rootPath string) (*fileServer, error) {
 
 	idCounter++
 
-	return &fileServer{ID: idCounter, Port: port, RootPath: serverRootPath, server: listener}, nil
+	return &fileServer{ID: idCounter, Port: port, RootPath: serverRootPath, OpenedFile: file, server: listener}, nil
 }
 
 func (fs *fileServer) Url() string {
@@ -70,4 +78,19 @@ func checkPortFree(port int) bool {
 
 	conn.Close()
 	return true
+}
+
+func formatRootPath(path string) string {
+	basePath := filepath.Base(path)
+	if strings.Contains(basePath, ".") {
+		return filepath.Dir(path)
+	}
+	return path
+}
+
+func isHTMLFile(path string) bool {
+	exts := strings.Split(path, ".")
+	ext := strings.ToLower(exts[len(exts)-1])
+	htmlExts := []string{"html", "htm"}
+	return stringInSlice(ext, htmlExts)
 }
