@@ -2,7 +2,7 @@
 
 A windows-focused tiny static web server app written in go. It features HTML file live-reload functionality built in which will also dynamically reload linked CSS files.
 
-Webby sits in the windows taskbar. When clicked the management interface will open via a browser. You can exit webby by right-clicking this icon.
+On windows, Webby sits in the windows taskbar. When clicked the management interface will open via a browser. You can exit webby by right-clicking this icon.
 
 My experience of writing in Go is limited so there's likely to be some inefficiencies & bugs.
 
