@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ssddanbrown/webby/internal/logger"
 	"io"
 	"net"
 	"net/http"
@@ -42,36 +43,7 @@ func startFileServer(path string, manager *managerServer) (*fileServer, error) {
 		return nil, err
 	}
 
-	go func() {
-
-		handler := http.NewServeMux()
-		staticHandler := http.FileServer(http.Dir(rootPath))
-
-		handler.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			rPath := r.URL.Path
-			fPath := filepath.Join(serverRootPath, rPath)
-
-			// Prevent caching of served files
-			w.Header().Add("Cache-Control", "no-cache")
-
-			// Inject livereload script if serving a HTML file
-			if isHTMLFile(fPath) && manager.LiveReload {
-				_, err := os.Stat(fPath)
-				if err == nil {
-					file, err := os.Open(fPath)
-					checkErr(err)
-					w.Header().Add("Content-Type", "text/html")
-					io.Copy(w, file)
-					fmt.Fprintf(w, "\n<script src=\"http://localhost:%d/livereload.js\"></script>\n", manager.Port)
-					return
-				}
-			}
-
-			staticHandler.ServeHTTP(w, r)
-		})
-
-		http.Serve(listener, handler)
-	}()
+	go listenAndServe(manager, listener, rootPath, serverRootPath)
 
 	idCounter++
 
@@ -82,12 +54,53 @@ func (fs *fileServer) Url() string {
 	return fmt.Sprintf("http://localhost:%d", fs.Port)
 }
 
+func listenAndServe(manager *managerServer, listener net.Listener, rootPath string, serverRootPath string) {
+	handler := http.NewServeMux()
+	staticHandler := http.FileServer(http.Dir(rootPath))
+
+	handler.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		rPath := r.URL.Path
+		fPath := filepath.Join(serverRootPath, rPath)
+		logger.Devlog(fPath)
+
+		// Check if an index html file is being served and update request path if so
+		if rPath == "/" {
+			indexFilePath := filepath.Join(serverRootPath, rPath, "index.html")
+			_, err := os.Stat(indexFilePath)
+			if err == nil {
+				fPath = indexFilePath
+			}
+		}
+
+		// Prevent caching of served files
+		w.Header().Add("Cache-Control", "no-cache")
+
+		// Inject livereload script if serving a HTML file
+		if isHTMLFile(fPath) && manager.LiveReload {
+			_, err := os.Stat(fPath)
+			if err == nil {
+				file, err := os.Open(fPath)
+				checkErr(err)
+				w.Header().Add("Content-Type", "text/html")
+				io.Copy(w, file)
+				fmt.Fprintf(w, "\n<script src=\"http://localhost:%d/livereload.js\"></script>\n", manager.Port)
+				return
+			}
+		}
+
+		// Otherwise serve a static file
+		staticHandler.ServeHTTP(w, r)
+	})
+
+	http.Serve(listener, handler)
+}
+
 func getFreePort() int {
 	portMin := 8000
 	portMax := 9000
 	currentPort := portMin
 
-	for currentPort <= portMax && !checkPortFree(currentPort) {
+	for currentPort <= portMax && !isPortFree(currentPort) {
 		currentPort++
 	}
 
@@ -95,7 +108,7 @@ func getFreePort() int {
 	return currentPort
 }
 
-func checkPortFree(port int) bool {
+func isPortFree(port int) bool {
 
 	if intInSlice(port, usedPorts) {
 		return false

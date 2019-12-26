@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ssddanbrown/webby/internal/logger"
 	"html/template"
 	"net"
 	"net/http"
@@ -32,7 +33,7 @@ type managerServer struct {
 func (m *managerServer) addFileServer(path string) (*fileServer, error) {
 	fServer, err := m.findFileServerByPath(formatRootPath(path))
 	if err == nil {
-		display("Server already running")
+		logger.Display("Server already running")
 		return fServer, err
 	}
 
@@ -41,7 +42,7 @@ func (m *managerServer) addFileServer(path string) (*fileServer, error) {
 		return nil, err
 	}
 	m.FileServers = append(m.FileServers, *fServer)
-	display(fmt.Sprintf("Serving files from %s at http://localhost:%d", fServer.RootPath, fServer.Port))
+	logger.Display(fmt.Sprintf("Serving files from %s at http://localhost:%d", fServer.RootPath, fServer.Port))
 
 	m.watchFolder(fServer.RootPath)
 	return fServer, nil
@@ -89,7 +90,7 @@ func (m *managerServer) sendReloadSignal(file string) {
 		}
 	}
 
-	devlog("File changed: " + file)
+	logger.Devlog("File changed: " + file)
 }
 
 func (m *managerServer) handleFileChange(filePath string) {
@@ -102,7 +103,7 @@ func (m *managerServer) handleFileChange(filePath string) {
 
 	// Ignore git directories
 	if strings.Contains(filePath, ".git") {
-		devlog("GITCHANGE")
+		logger.Devlog("GITCHANGE")
 		return
 	}
 
@@ -129,7 +130,7 @@ func (m *managerServer) startFileWatcher() error {
 					m.handleFileChange(ev.Name)
 				}
 			case err := <-watcher.Error:
-				devlog("File Watcher Error: " + err.Error())
+				logger.Devlog("File Watcher Error: " + err.Error())
 			}
 		}
 
@@ -141,7 +142,7 @@ func (m *managerServer) startFileWatcher() error {
 
 	for i := 0; i < len(m.WatchedFolders); i++ {
 		err = watcher.Watch(m.WatchedFolders[i])
-		devlog("Adding file watcher to " + m.WatchedFolders[i])
+		logger.Devlog("Adding file watcher to " + m.WatchedFolders[i])
 		checkErr(err)
 	}
 
@@ -163,7 +164,7 @@ func (m *managerServer) watchFolder(folderPath string) error {
 			return nil
 		}
 		err := m.fileWatcher.Watch(folderPath)
-		devlog("Adding file watcher to " + folderPath)
+		logger.Devlog("Adding file watcher to " + folderPath)
 		if err != nil {
 			return err
 		}
@@ -217,7 +218,7 @@ func (manager *managerServer) getManagerRouting() *http.ServeMux {
 		}
 		manager.FileServers = append(manager.FileServers[:index], manager.FileServers[index+1:]...)
 
-		devlog(fmt.Sprintf("Deleted server with id of %d", server.ID))
+		logger.Devlog(fmt.Sprintf("Deleted server with id of %d", server.ID))
 		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
 	})
 
@@ -293,7 +294,7 @@ func (manager *managerServer) getLivereloadWsHandler() func(ws *websocket.Conn) 
 					},
 					ServerName: "Webby",
 				}
-				devlog("Sending livereload hello")
+				logger.Devlog("Sending livereload hello")
 				websocket.JSON.Send(ws, response)
 			}
 

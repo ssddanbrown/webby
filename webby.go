@@ -3,22 +3,22 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
+	"github.com/ssddanbrown/webby/internal/logger"
 	"os/exec"
 	"path/filepath"
 
 	"github.com/fatih/color"
 )
 
-var isVerbose bool
 
 func main() {
-
 	flag.Usage = usage
 	isVerbosePtr := flag.Bool("v", false, "Show verbose output")
 	flag.Parse()
 
-	isVerbose = *isVerbosePtr
+	if *isVerbosePtr {
+		logger.ShowVerboseOutput();
+	}
 
 	commandArgs := flag.Args()
 	var inputPath string
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	port := 35729
-	portFree := checkPortFree(port)
+	portFree := isPortFree(port)
 
 	var fServer *fileServer
 	var err error
@@ -43,10 +43,10 @@ func main() {
 
 		if fServer.OpenedFile != "" {
 			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, fServer.OpenedFile)
-			openWebPage(url)
+			_ = openWebPage(url)
 		}
 
-		display(fmt.Sprintf("Webby Manager started at http://localhost:%d", port))
+		logger.Display(fmt.Sprintf("Webby Manager started at http://localhost:%d", port))
 		err = manager.listen(port)
 		checkErr(err)
 	} else {
@@ -54,27 +54,17 @@ func main() {
 		fServer = requestNewFileServer(port, inputPath)
 		if isHTMLFile(inputPath) {
 			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, filepath.Base(inputPath))
-			openWebPage(url)
+			_ = openWebPage(url)
 		}
-		display("Server already open")
+		logger.Display("Server already open")
 	}
 
 }
 
 func checkErr(err error) {
-	if err != nil && isVerbose {
-		color.Red("[ERROR] %s", err.Error())
+	if err != nil {
+		logger.Error(err)
 	}
-}
-
-func devlog(text string) {
-	if isVerbose {
-		color.Blue("[DEVLOG] %s", text)
-	}
-}
-
-func display(text string) {
-	color.Green("%s", text)
 }
 
 func intInSlice(integer int, list []int) bool {
@@ -93,14 +83,6 @@ func stringInSlice(str string, list []string) bool {
 		}
 	}
 	return false
-}
-
-func isDir(path string) bool {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return fileInfo.IsDir()
 }
 
 func openWebPage(url string) error {
