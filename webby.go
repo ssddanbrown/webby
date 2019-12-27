@@ -48,7 +48,7 @@ func main() {
 		var mgr = manager.NewServer(opts)
 		fServer, err = mgr.AddFileServer(inputPath)
 		if err != nil {
-			logger.Error(err)
+			logger.Error("Adding initial file server", err)
 			return
 		}
 
@@ -63,7 +63,7 @@ func main() {
 		// Send request to add server
 		err, fServer = requestNewFileServer(opts.ManagerPort, inputPath)
 		if err != nil {
-			logger.Error(err)
+			logger.Error("Requesting new file server on existing manager", err)
 			return
 		}
 
@@ -75,8 +75,7 @@ func main() {
 	}
 
 	if err != nil {
-		logger.Error(err)
-		return
+		logger.Error("Startup error", err)
 	}
 }
 

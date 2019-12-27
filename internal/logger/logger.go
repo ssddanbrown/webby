@@ -10,9 +10,9 @@ func ShowVerboseOutput() {
 }
 
 // Error will print out the given error in a suitable attention-seeking format.
-func Error(err error) {
+func Error(event string, err error) {
 	if isVerbose {
-		color.Red("[ERROR] %s", err.Error())
+		color.Red("[ERROR] on %s; %s", event, err.Error())
 	}
 }
 

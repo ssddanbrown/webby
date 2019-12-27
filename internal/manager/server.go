@@ -198,13 +198,13 @@ func (m *Server) getManagerRouting() *http.ServeMux {
 			fileServer, err := m.AddFileServer(rootPath)
 
 			if err != nil {
-				logger.Error(err)
+				logger.Error("Create server handler", err)
 				return
 			}
 
 			err = json.NewEncoder(w).Encode(fileServer)
 			if err != nil {
-				logger.Error(err)
+				logger.Error("Create server response encoder", err)
 			}
 		}
 	})
@@ -215,14 +215,14 @@ func (m *Server) getManagerRouting() *http.ServeMux {
 		idVal, err := strconv.Atoi(id)
 
 		if err != nil {
-			logger.Error(err)
+			logger.Error("Delete server handler", err)
 			return
 		}
 
 		index, server := m.findFileServerById(idVal)
 		if server == nil {
-			err := fmt.Errorf("Fileserver with ID of %d not found", idVal)
-			logger.Error(err)
+			err := fmt.Errorf("fileserver with ID of %d not found", idVal)
+			logger.Error("Delete server handler", err)
 			return
 		}
 
@@ -297,7 +297,7 @@ func (m *Server) getLivereloadWsHandler() func(ws *websocket.Conn) {
 			wsData := new(livereloadResponse)
 			err := websocket.JSON.Receive(ws, &wsData)
 			if err != nil {
-				logger.Error(err)
+				logger.Error("Websocket message receiver", err)
 				return
 			}
 

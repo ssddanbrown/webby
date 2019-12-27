@@ -67,7 +67,7 @@ func (fs *FileServer) Url() string {
 func (fs *FileServer) Destroy() {
 	err := fs.server.Close()
 	if err != nil {
-		logger.Error(err)
+		logger.Error("File server destroy", err)
 	}
 }
 
