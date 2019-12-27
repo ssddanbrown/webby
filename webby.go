@@ -1,15 +1,20 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/ssddanbrown/webby/internal/fileserver"
 	"github.com/ssddanbrown/webby/internal/logger"
+	"github.com/ssddanbrown/webby/internal/manager"
+	"github.com/ssddanbrown/webby/internal/util"
+	"net/http"
+	"net/url"
 	"os/exec"
 	"path/filepath"
 
 	"github.com/fatih/color"
 )
-
 
 func main() {
 	flag.Usage = usage
@@ -17,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	if *isVerbosePtr {
-		logger.ShowVerboseOutput();
+		logger.ShowVerboseOutput()
 	}
 
 	commandArgs := flag.Args()
@@ -29,60 +34,68 @@ func main() {
 		inputPath, _ = filepath.Abs("./")
 	}
 
-	port := 35729
-	portFree := isPortFree(port)
+	opts := &util.Options{
+		LiveReloadEnabled: true,
+		ManagerPort:       35729,
+	}
+	portFree := util.IsPortFree(opts.ManagerPort)
 
-	var fServer *fileServer
+	var fServer *fileserver.FileServer
 	var err error
 
 	if portFree {
 		// Create a new manager server
-		var manager = new(managerServer)
-		fServer, err = manager.addFileServer(inputPath)
-		checkErr(err)
-
-		if fServer.OpenedFile != "" {
-			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, fServer.OpenedFile)
-			_ = openWebPage(url)
+		var mgr = manager.NewServer(opts)
+		fServer, err = mgr.AddFileServer(inputPath)
+		if err != nil {
+			logger.Error(err)
+			return
 		}
 
-		logger.Display(fmt.Sprintf("Webby Manager started at http://localhost:%d", port))
-		err = manager.listen(port)
-		checkErr(err)
+		if fServer.OpenedFile != "" {
+			urlToOpen := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, fServer.OpenedFile)
+			_ = openWebPage(urlToOpen)
+		}
+
+		logger.Display(fmt.Sprintf("Webby Manager started at http://localhost:%d", opts.ManagerPort))
+		err = mgr.Listen()
 	} else {
 		// Send request to add server
-		fServer = requestNewFileServer(port, inputPath)
-		if isHTMLFile(inputPath) {
-			url := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, filepath.Base(inputPath))
-			_ = openWebPage(url)
+		err, fServer = requestNewFileServer(opts.ManagerPort, inputPath)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		if util.IsHTMLFile(inputPath) {
+			urlToOpen := fmt.Sprintf("http://localhost:%d/%s", fServer.Port, filepath.Base(inputPath))
+			_ = openWebPage(urlToOpen)
 		}
 		logger.Display("Server already open")
 	}
 
-}
-
-func checkErr(err error) {
 	if err != nil {
 		logger.Error(err)
+		return
 	}
 }
 
-func intInSlice(integer int, list []int) bool {
-	for _, v := range list {
-		if v == integer {
-			return true
-		}
-	}
-	return false
-}
+func requestNewFileServer(masterPort int, path string) (error, *fileserver.FileServer) {
+	localServer := fmt.Sprintf("http://127.0.0.1:%d/create-server", masterPort)
 
-func stringInSlice(str string, list []string) bool {
-	for _, v := range list {
-		if v == str {
-			return true
-		}
+	form := url.Values{}
+	form.Add("root_path", path)
+	resp, err := http.PostForm(localServer, form)
+	if err != nil {
+		return err, nil
 	}
-	return false
+
+	defer resp.Body.Close()
+	var serverData fileserver.FileServer
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&serverData)
+
+	return err, &serverData
 }
 
 func openWebPage(url string) error {
@@ -98,5 +111,6 @@ func usage() {
 	color.Cyan("  webby test.html 	# As above and opens up test.html in the browser")
 	fmt.Println("")
 	color.Blue("Options:")
+	color.Cyan("  -v 		# Show verbose output")
 	flag.PrintDefaults()
 }

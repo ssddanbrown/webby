@@ -14,11 +14,11 @@
 		<h1>Webby</h1>
 		
 		<section class="details">
-			<p>Running on <a style="color: #4DCDDC;" href="http://localhost:{{.Port}}">http://localhost:{{.Port}}</a></p>
+			<p>Running on <a style="color: #4DCDDC;" href="http://localhost:{{.Options.ManagerPort}}">http://localhost:{{.Options.ManagerPort}}</a></p>
 			{{if .NetworkIP}}
-				<p>Your local network address is <a style="color: #DA8C44;" href="http://{{.NetworkIP}}:{{.Port}}" target="_blank">http://{{.NetworkIP}}:{{.Port}}</a></p>
+				<p>Your local network address is <a style="color: #DA8C44;" href="http://{{.NetworkIP}}:{{.Options.ManagerPort}}" target="_blank">http://{{.NetworkIP}}:{{.Options.ManagerPort}}</a></p>
 			{{end}}
-			{{if .LiveReload}}
+			{{if .Options.LiveReloadEnabled}}
 			<p>Live reload enabled &nbsp; <a href="/toggle-livereload" style="color: #DE5656;text-decoration:underline;">Disable</a></p>
 			{{else}}
 			<p>Live reload disabled &nbsp; <a href="/toggle-livereload" style="text-decoration:underline;">Enable</a></p>

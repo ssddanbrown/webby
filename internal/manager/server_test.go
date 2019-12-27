@@ -1,4 +1,4 @@
-package main
+package manager
 
 import (
 	"fmt"
@@ -10,8 +10,8 @@ import (
 	"testing"
 )
 
-func getTestServer() (*managerServer, *httptest.Server) {
-	m := new(managerServer)
+func getTestServer() (*Server, *httptest.Server) {
+	m := new(Server)
 	m.startFileWatcher()
 	handler := m.getManagerRouting()
 	server := httptest.NewServer(handler)

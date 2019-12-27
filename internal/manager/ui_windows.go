@@ -1,4 +1,4 @@
-package main
+package manager
 
 import (
 	"bytes"
@@ -9,11 +9,11 @@ import (
 	rice "github.com/GeertJohan/go.rice"
 )
 
-func (m *managerServer) startUI() {
+func (m *Server) startUI() {
 	m.setupTrayIcon()
 }
 
-func (m *managerServer) setupTrayIcon() {
+func (m *Server) setupTrayIcon() {
 	// We need either a walk.MainWindow or a walk.Dialog for their message loop.
 	// We will not make it visible in this example, though.
 	mw, err := walk.NewMainWindow()

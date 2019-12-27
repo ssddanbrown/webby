@@ -1,35 +1,36 @@
-package main
+package fileserver
 
 import (
 	"fmt"
 	"github.com/ssddanbrown/webby/internal/logger"
+	"github.com/ssddanbrown/webby/internal/util"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
-type fileServer struct {
+type FileServer struct {
 	ID         int    `json:"id"`
 	Port       int    `json:"port"`
 	RootPath   string `json:"path"`
 	OpenedFile string `json:"file"`
-	manager    *managerServer
 	server     net.Listener
+	options    *util.Options
 }
 
-var usedPorts []int
+var usedPorts = make(map[int]bool)
 var idCounter int
 
-func startFileServer(path string, manager *managerServer) (*fileServer, error) {
+// StartFileServer starts a new file server and returns the instance
+func StartFileServer(path string, options *util.Options) (*FileServer, error) {
 
-	rootPath := formatRootPath(path)
+	rootPath := util.FormatRootPath(path)
 	port := getFreePort()
 	file := ""
 
-	if isHTMLFile(path) {
+	if util.IsHTMLFile(path) {
 		file = filepath.Base(path)
 	}
 
@@ -43,18 +44,34 @@ func startFileServer(path string, manager *managerServer) (*fileServer, error) {
 		return nil, err
 	}
 
-	go listenAndServe(manager, listener, rootPath, serverRootPath)
+	go listenAndServe(options, listener, rootPath, serverRootPath)
 
 	idCounter++
 
-	return &fileServer{ID: idCounter, Port: port, RootPath: serverRootPath, OpenedFile: file, manager: manager, server: listener}, nil
+	return &FileServer{
+		ID:         idCounter,
+		Port:       port,
+		RootPath:   serverRootPath,
+		OpenedFile: file,
+		server:     listener,
+		options:    options,
+	}, nil
 }
 
-func (fs *fileServer) Url() string {
+// Url provides the direct URL for the root of the started server
+func (fs *FileServer) Url() string {
 	return fmt.Sprintf("http://localhost:%d", fs.Port)
 }
 
-func listenAndServe(manager *managerServer, listener net.Listener, rootPath string, serverRootPath string) {
+// Destroy the file server and take it offline
+func (fs *FileServer) Destroy() {
+	err := fs.server.Close()
+	if err != nil {
+		logger.Error(err)
+	}
+}
+
+func listenAndServe(options *util.Options, listener net.Listener, rootPath string, serverRootPath string) {
 	handler := http.NewServeMux()
 	staticHandler := http.FileServer(http.Dir(rootPath))
 
@@ -76,15 +93,16 @@ func listenAndServe(manager *managerServer, listener net.Listener, rootPath stri
 		w.Header().Add("Cache-Control", "no-cache")
 
 		// Inject livereload script if serving a HTML file
-		if isHTMLFile(fPath) && manager.LiveReload {
+		if util.IsHTMLFile(fPath) && options.LiveReloadEnabled {
 			_, err := os.Stat(fPath)
 			if err == nil {
 				file, err := os.Open(fPath)
-				checkErr(err)
-				w.Header().Add("Content-Type", "text/html")
-				io.Copy(w, file)
-				fmt.Fprintf(w, "\n<script src=\"http://localhost:%d/livereload.js\"></script>\n", manager.Port)
-				return
+				if err == nil {
+					w.Header().Add("Content-Type", "text/html")
+					io.Copy(w, file)
+					fmt.Fprintf(w, "\n<script src=\"http://localhost:%d/livereload.js\"></script>\n", options.ManagerPort)
+					return
+				}
 			}
 		}
 
@@ -104,36 +122,15 @@ func getFreePort() int {
 		currentPort++
 	}
 
-	usedPorts = append(usedPorts, currentPort)
+	usedPorts[currentPort] = true
 	return currentPort
 }
 
 func isPortFree(port int) bool {
 
-	if intInSlice(port, usedPorts) {
+	if usedPorts[port] {
 		return false
 	}
 
-	conn, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
-	if err != nil {
-		return false
-	}
-
-	conn.Close()
-	return true
-}
-
-func formatRootPath(path string) string {
-	basePath := filepath.Base(path)
-	if strings.Contains(basePath, ".") {
-		return filepath.Dir(path)
-	}
-	return path
-}
-
-func isHTMLFile(path string) bool {
-	exts := strings.Split(path, ".")
-	ext := strings.ToLower(exts[len(exts)-1])
-	htmlExts := []string{"html", "htm"}
-	return stringInSlice(ext, htmlExts)
+	return util.IsPortFree(port)
 }

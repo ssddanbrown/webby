@@ -1,10 +1,12 @@
-package main
+package manager
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ssddanbrown/webby/internal/fileserver"
 	"github.com/ssddanbrown/webby/internal/logger"
+	"github.com/ssddanbrown/webby/internal/util"
 	"html/template"
 	"net"
 	"net/http"
@@ -18,26 +20,33 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-type managerServer struct {
-	FileServers    []fileServer
+type Server struct {
+	FileServers    []fileserver.FileServer
 	WatchedFolders []string
 	fileWatcher    *fsnotify.Watcher
 	changedFiles   chan string
 	sockets        []*websocket.Conn
 	lastFileChange int64
-	Port           int
 	NetworkIP      string
-	LiveReload     bool
+	Options        *util.Options
 }
 
-func (m *managerServer) addFileServer(path string) (*fileServer, error) {
-	fServer, err := m.findFileServerByPath(formatRootPath(path))
+// NewServer creates a new server instance using the given Options
+func NewServer(options *util.Options) *Server {
+	server := new(Server)
+	server.Options = options
+	return server
+}
+
+// AddFileServer adds a file, for the given path, to the manager
+func (m *Server) AddFileServer(path string) (*fileserver.FileServer, error) {
+	fServer, err := m.findFileServerByPath(util.FormatRootPath(path))
 	if err == nil {
 		logger.Display("Server already running")
 		return fServer, err
 	}
 
-	fServer, err = startFileServer(path, m)
+	fServer, err = fileserver.StartFileServer(path, m.Options)
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +57,23 @@ func (m *managerServer) addFileServer(path string) (*fileServer, error) {
 	return fServer, nil
 }
 
-func (m *managerServer) findFileServerByPath(rootPath string) (*fileServer, error) {
+// Listen starts the manager http server on the given port
+func (m *Server) Listen() error {
+
+	m.NetworkIP = getLocalIP()
+	m.startFileWatcher()
+
+	handler := m.getManagerRouting()
+	go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", m.Options.ManagerPort), handler)
+	m.startUI()
+	return nil
+}
+
+func (m *Server) findFileServerByPath(rootPath string) (*fileserver.FileServer, error) {
 	searchPath, err := filepath.Abs(rootPath)
-	checkErr(err)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, fServer := range m.FileServers {
 		if fServer.RootPath == searchPath {
@@ -58,23 +81,10 @@ func (m *managerServer) findFileServerByPath(rootPath string) (*fileServer, erro
 		}
 	}
 
-	return nil, errors.New("Path not found")
+	return nil, errors.New("path not found")
 }
 
-func (m *managerServer) listen(port int) error {
-
-	m.Port = port
-	m.NetworkIP = getLocalIP()
-	m.LiveReload = true
-	m.startFileWatcher()
-
-	handler := m.getManagerRouting()
-	go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), handler)
-	m.startUI()
-	return nil
-}
-
-func (m *managerServer) sendReloadSignal(file string) {
+func (m *Server) sendReloadSignal(file string) {
 	response := livereloadChange{
 		Command: "reload",
 		Path:    file,
@@ -93,7 +103,7 @@ func (m *managerServer) sendReloadSignal(file string) {
 	logger.Devlog("File changed: " + file)
 }
 
-func (m *managerServer) handleFileChange(filePath string) {
+func (m *Server) handleFileChange(filePath string) {
 
 	// Prevent duplicate changes
 	currentTime := time.Now().UnixNano()
@@ -111,18 +121,17 @@ func (m *managerServer) handleFileChange(filePath string) {
 	m.changedFiles <- filePath
 }
 
-func (m *managerServer) startFileWatcher() error {
+func (m *Server) startFileWatcher() error {
 	watcher, err := fsnotify.NewWatcher()
-	checkErr(err)
+	if err != nil {
+		return err
+	}
 
 	m.fileWatcher = watcher
 	m.changedFiles = make(chan string)
 
 	// Process events
 	go func() {
-
-		done := make(chan bool)
-
 		for {
 			select {
 			case ev := <-watcher.Event:
@@ -133,17 +142,14 @@ func (m *managerServer) startFileWatcher() error {
 				logger.Devlog("File Watcher Error: " + err.Error())
 			}
 		}
-
-		// Hang so program doesn't exit
-		<-done
-
-		watcher.Close()
 	}()
 
 	for i := 0; i < len(m.WatchedFolders); i++ {
 		err = watcher.Watch(m.WatchedFolders[i])
 		logger.Devlog("Adding file watcher to " + m.WatchedFolders[i])
-		checkErr(err)
+		if err != nil {
+			return err
+		}
 	}
 
 	go func() {
@@ -157,8 +163,8 @@ func (m *managerServer) startFileWatcher() error {
 	return nil
 }
 
-func (m *managerServer) watchFolder(folderPath string) error {
-	if !stringInSlice(folderPath, m.WatchedFolders) {
+func (m *Server) watchFolder(folderPath string) error {
+	if !util.StringInSlice(folderPath, m.WatchedFolders) {
 		m.WatchedFolders = append(m.WatchedFolders, folderPath)
 		if m.fileWatcher == nil {
 			return nil
@@ -172,8 +178,8 @@ func (m *managerServer) watchFolder(folderPath string) error {
 	return nil
 }
 
-func (manager *managerServer) findFileServerById(id int) (int, *fileServer) {
-	for index, server := range manager.FileServers {
+func (m *Server) findFileServerById(id int) (int, *fileserver.FileServer) {
+	for index, server := range m.FileServers {
 		if server.ID == id {
 			return index, &server
 		}
@@ -181,7 +187,7 @@ func (manager *managerServer) findFileServerById(id int) (int, *fileServer) {
 	return -1, nil
 }
 
-func (manager *managerServer) getManagerRouting() *http.ServeMux {
+func (m *Server) getManagerRouting() *http.ServeMux {
 
 	handler := http.NewServeMux()
 
@@ -189,10 +195,17 @@ func (manager *managerServer) getManagerRouting() *http.ServeMux {
 	handler.HandleFunc("/create-server", func(w http.ResponseWriter, req *http.Request) {
 		if req.Method == "POST" {
 			rootPath := req.FormValue("root_path")
-			fileServer, err := manager.addFileServer(rootPath)
-			checkErr(err)
+			fileServer, err := m.AddFileServer(rootPath)
+
+			if err != nil {
+				logger.Error(err)
+				return
+			}
+
 			err = json.NewEncoder(w).Encode(fileServer)
-			checkErr(err)
+			if err != nil {
+				logger.Error(err)
+			}
 		}
 	})
 
@@ -200,23 +213,29 @@ func (manager *managerServer) getManagerRouting() *http.ServeMux {
 	handler.HandleFunc("/delete-server", func(w http.ResponseWriter, req *http.Request) {
 		id := req.URL.Query().Get("id")
 		idVal, err := strconv.Atoi(id)
-		checkErr(err)
-		index, server := manager.findFileServerById(idVal)
-		if server == nil {
-			err := fmt.Errorf("Fileserver with ID of %d not found", idVal)
-			checkErr(err)
+
+		if err != nil {
+			logger.Error(err)
 			return
 		}
+
+		index, server := m.findFileServerById(idVal)
+		if server == nil {
+			err := fmt.Errorf("Fileserver with ID of %d not found", idVal)
+			logger.Error(err)
+			return
+		}
+
 		// Destroy server
-		server.server.Close()
-		manager.fileWatcher.RemoveWatch(server.RootPath)
-		for i, path := range manager.WatchedFolders {
+		server.Destroy()
+		m.fileWatcher.RemoveWatch(server.RootPath)
+		for i, path := range m.WatchedFolders {
 			if path == server.RootPath {
-				manager.WatchedFolders = append(manager.WatchedFolders[:i], manager.WatchedFolders[i+1:]...)
+				m.WatchedFolders = append(m.WatchedFolders[:i], m.WatchedFolders[i+1:]...)
 				break
 			}
 		}
-		manager.FileServers = append(manager.FileServers[:index], manager.FileServers[index+1:]...)
+		m.FileServers = append(m.FileServers[:index], m.FileServers[index+1:]...)
 
 		logger.Devlog(fmt.Sprintf("Deleted server with id of %d", server.ID))
 		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
@@ -224,18 +243,18 @@ func (manager *managerServer) getManagerRouting() *http.ServeMux {
 
 	// Toggle livereload on/off
 	handler.HandleFunc("/toggle-livereload", func(w http.ResponseWriter, req *http.Request) {
-		manager.LiveReload = !manager.LiveReload
+		m.Options.LiveReloadEnabled = !m.Options.LiveReloadEnabled
 		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
 	})
 
 	// Load compiled in static content
-	fileBox := rice.MustFindBox("res")
+	fileBox := rice.MustFindBox("../../res")
 
-	// Get manager hompage
+	// Get manager homepage
 	handler.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		templString := fileBox.MustString("index.html")
 		templ, _ := template.New("Home").Parse(templString)
-		templ.Execute(w, manager)
+		templ.Execute(w, m)
 	})
 
 	// Static file serving
@@ -246,7 +265,7 @@ func (manager *managerServer) getManagerRouting() *http.ServeMux {
 	handler.Handle("/livereload.js", http.FileServer(fileBox.HTTPBox()))
 
 	// Websocket handling
-	wsHandler := manager.getLivereloadWsHandler()
+	wsHandler := m.getLivereloadWsHandler()
 	handler.Handle("/livereload", websocket.Handler(wsHandler))
 
 	return handler
@@ -268,17 +287,17 @@ type livereloadChange struct {
 	LiveCSS bool   `json:"liveCSS"`
 }
 
-func (manager *managerServer) getLivereloadWsHandler() func(ws *websocket.Conn) {
+func (m *Server) getLivereloadWsHandler() func(ws *websocket.Conn) {
 	return func(ws *websocket.Conn) {
 
-		manager.sockets = append(manager.sockets, ws)
+		m.sockets = append(m.sockets, ws)
 
 		for {
 			// websocket.Message.Send(ws, "Hello, Client!")
 			wsData := new(livereloadResponse)
 			err := websocket.JSON.Receive(ws, &wsData)
 			if err != nil {
-				checkErr(err)
+				logger.Error(err)
 				return
 			}
 
